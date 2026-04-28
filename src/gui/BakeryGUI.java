@@ -148,7 +148,7 @@ public class BakeryGUI extends Application {
                 ing.setName(nameField.getText());
                 ing.setDescription(descField.getText());
                 ing.setCaloriesPer100(Double.parseDouble(calField.getText()));
-                // If name changed, we might need to update the hash table key
+
                 if (!oldName.equals(ing.getName())) {
                     system.removeIngredient(oldName);
                     system.addIngredient(ing);
