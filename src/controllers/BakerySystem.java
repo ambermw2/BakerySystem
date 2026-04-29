@@ -9,15 +9,18 @@ import utils.MySorter;
 
 import java.io.*;
 
+// Controller for the bakery system
 public class BakerySystem implements Serializable {
-    private MyHashTable<String, BakedGood> bakedGoods;
-    private MyHashTable<String, Ingredient> ingredients;
+    private MyHashTable<String, BakedGood> bakedGoods; // Store baked goods
+    private MyHashTable<String, Ingredient> ingredients; // Store ingredients
 
+    // System constructor
     public BakerySystem() {
         bakedGoods = new MyHashTable<>();
         ingredients = new MyHashTable<>();
     }
 
+    // Loads sample data
     public void initializeDefaultData() {
         Ingredient flour = new Ingredient("Flour", "White flour", 100);
         Ingredient sugar = new Ingredient("Sugar", "White sugar", 100);
@@ -60,82 +63,180 @@ public class BakerySystem implements Serializable {
         addBakedGood(bananaBread);
     }
 
+    // Adds an ingredient
     public void addIngredient(Ingredient ingredient) {
         ingredients.put(ingredient.getName(), ingredient);
     }
 
+    // Gets an ingredient by name
     public Ingredient getIngredient(String name) {
         return ingredients.get(name);
     }
 
+    // Removes an ingredient and updates recipes
     public void removeIngredient(String name) {
-        ingredients.remove(name);
+        ingredients.remove(name); // Remove from master list
         for (BakedGood bg : bakedGoods.values()) {
             MyList<RecipeEntry> recipe = bg.getRecipe();
             for (RecipeEntry rc : recipe) {
                 if (rc.getIngredient().getName().equals(name)) {
-                    recipe.remove(rc);
+                    recipe.remove(rc); // Remove from baked good recipe
                     break;
                 }
             }
         }
     }
 
+    // Returns all ingredients
     public MyList<Ingredient> getAllIngredients() {
         return ingredients.values();
     }
 
-
+    // Adds a baked good
     public void addBakedGood(BakedGood bakedGood) {
         bakedGoods.put(bakedGood.getName(), bakedGood);
     }
 
+    // Gets a baked good by name
     public BakedGood getBakedGood(String name) {
         return bakedGoods.get(name);
     }
 
+    // Removes a baked good
     public void removeBakedGood(String name) {
         bakedGoods.remove(name);
     }
 
+    // Returns all baked goods
     public MyList<BakedGood> getAllBakedGoods() {
         return bakedGoods.values();
     }
 
-    //search functions
+    // Search baked goods by name
     public MyList<BakedGood> searchBakedGoodsByName(String name) {
-        MyList<BakedGood> results = new MyList<>();
-        BakedGood bg = bakedGoods.get(name);
-        if (bg != null) {
-            results.add(bg);
-        }
-        return results;
-    }
-
-    public MyList<BakedGood> searchBakedGoodsByDescription(String keyword) {
-        MyList<BakedGood> results = new MyList<>();
+        MyList<BakedGood> results = new MyList<>(); // List for results
+        if (name == null || name.trim().isEmpty()) return results;
+        String firstKeyword = name.trim().split("\\s+")[0].toLowerCase(); // Use first keyword
         for (BakedGood bg : bakedGoods.values()) {
-            if (bg.getDescription().toLowerCase().contains(keyword.toLowerCase())) {
-                results.add(bg);
+            if (bg.getName().toLowerCase().contains(firstKeyword)) {
+                results.add(bg); // Add if name matches
             }
         }
         return results;
     }
 
-    public MyList<Ingredient> searchIngredientsByName(String name) {
-        MyList<Ingredient> results = new MyList<>();
-        Ingredient ing = ingredients.get(name);
-        if (ing != null) {
-            results.add(ing);
+    // Search baked goods by description
+    public MyList<BakedGood> searchBakedGoodsByDescription(String keyword) {
+        MyList<BakedGood> results = new MyList<>();
+        if (keyword == null || keyword.trim().isEmpty()) return results;
+        String firstKeyword = keyword.trim().split("\\s+")[0].toLowerCase();
+        for (BakedGood bg : bakedGoods.values()) {
+            if (bg.getDescription().toLowerCase().contains(firstKeyword)) {
+                results.add(bg); // Add if description matches
+            }
         }
         return results;
     }
 
+    // Search ingredients by name
+    public MyList<Ingredient> searchIngredientsByName(String name) {
+        MyList<Ingredient> results = new MyList<>();
+        if (name == null || name.trim().isEmpty()) return results;
+        String firstKeyword = name.trim().split("\\s+")[0].toLowerCase();
+        for (Ingredient ing : ingredients.values()) {
+            if (ing.getName().toLowerCase().contains(firstKeyword)) {
+                results.add(ing); // Add if name matches
+            }
+        }
+        return results;
+    }
+
+    // Search ingredients by description
+    public MyList<Ingredient> searchIngredientsByDescription(String keyword) {
+        MyList<Ingredient> results = new MyList<>();
+        if (keyword == null || keyword.trim().isEmpty()) return results;
+        String firstKeyword = keyword.trim().split("\\s+")[0].toLowerCase();
+        for (Ingredient ing : ingredients.values()) {
+            if (ing.getDescription().toLowerCase().contains(firstKeyword)) {
+                results.add(ing); // Add if description matches
+            }
+        }
+        return results;
+    }
+
+    // Saves data to text file
+    public void saveToTextFile(String filename) throws IOException {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            // Save Ingredients
+            for (Ingredient ing : ingredients.values()) {
+                writer.println("INGREDIENT:" + ing.getName() + "|" + ing.getDescription() + "|" + ing.getCaloriesPer100());
+            }
+            // Save Baked Goods
+            for (BakedGood bg : bakedGoods.values()) {
+                writer.println("BAKEDGOOD:" + bg.getName() + "|" + bg.getOrigin() + "|" + bg.getDescription() + "|" + bg.getImageUrl());
+                // Save Recipes
+                for (RecipeEntry re : bg.getRecipe()) {
+                    writer.println("RECIPE:" + bg.getName() + "|" + re.getIngredient().getName() + "|" + re.getQuantity());
+                }
+            }
+        }
+    }
+
+    // Loads data from text file
+    public static BakerySystem loadFromTextFile(String filename) throws IOException {
+        BakerySystem system = new BakerySystem(); // New system instance
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isEmpty()) continue;
+                String[] parts = line.split(":", 2);
+                if (parts.length < 2) continue;
+                String type = parts[0];
+                String[] data = parts[1].split("\\|");
+
+                switch (type) {
+                    case "INGREDIENT": // Parse ingredient
+                        if (data.length == 3) {
+                            system.addIngredient(new Ingredient(data[0], data[1], Double.parseDouble(data[2])));
+                        }
+                        break;
+                    case "BAKEDGOOD": // Parse baked good
+                        if (data.length == 4) {
+                            system.addBakedGood(new BakedGood(data[0], data[1], data[2], data[3]));
+                        }
+                        break;
+                    case "RECIPE": // Parse recipe entry
+                        if (data.length == 3) {
+                            BakedGood bg = system.getBakedGood(data[0]);
+                            Ingredient ing = system.getIngredient(data[1]);
+                            if (bg != null && ing != null) {
+                                bg.addIngredient(ing, Double.parseDouble(data[2]));
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+        return system;
+    }
+
+    // Sorts baked goods by name
     public void sortBakedGoodsByName(MyList<BakedGood> list) {
         MySorter.quickSort(list, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
     }
 
+    // Sorts baked goods by calories
     public void sortBakedGoodsByCalories(MyList<BakedGood> list) {
         MySorter.quickSort(list, (a, b) -> Double.compare(a.getTotalCalories(), b.getTotalCalories()));
+    }
+
+    // Sorts ingredients by name
+    public void sortIngredientsByName(MyList<Ingredient> list) {
+        MySorter.quickSort(list, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+    }
+
+    // Sorts ingredients by calories
+    public void sortIngredientsByCalories(MyList<Ingredient> list) {
+        MySorter.quickSort(list, (a, b) -> Double.compare(a.getCaloriesPer100(), b.getCaloriesPer100()));
     }
 }
